@@ -11,6 +11,7 @@ our @EXPORT = qw(decode_jkml);
 our $VERSION = "0.01";
 
 our @HERE_QUEUE;
+our $SELF;
 
 # JKML::PP is based on JSON::Tiny.
 # JSON::Tiny was "Adapted from Mojo::JSON and Mojo::Util".
@@ -20,7 +21,20 @@ our @HERE_QUEUE;
 
 sub new {
   my $class = shift;
-  bless {}, $class;
+  bless {
+    functions => {
+      base64 => \&MIME::Base64::decode_base64,
+    }
+  }, $class;
+}
+
+sub call {
+  my ($self, $name, $vref) = @_;
+  my $code = $self->{functions}->{$name};
+  unless ($code) {
+    _exception("Unknown function: $name");
+  }
+  $code->($vref);
 }
 
 my $FALSE = bless \(my $false = 0), 'JKML::PP::_Bool';
@@ -50,6 +64,9 @@ sub decode_jkml { JKML::PP->new->decode(shift) }
 
 sub decode {
   my ($self, $bytes) = @_;
+
+  local $SELF = $self;
+  local @HERE_QUEUE;
 
   # Missing input
   die 'Missing or empty input' unless $bytes;
@@ -174,8 +191,6 @@ sub _decode_string {
   m!\G((?:(?:[^\x00-\x1f\\"]|\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})){0,32766})*)!gc; # segfault on 5.8.x in t/20-mojo-json.t #83
   my $str = $1;
 
-  local @HERE_QUEUE;
-
   # Invalid character
   unless (m/\G"/gc) {
     _exception('Unexpected character or invalid escape while parsing string')
@@ -250,25 +265,22 @@ sub _decode_value {
   # Leading whitespace
   _skip_space();
 
-  # dedent()
+  # funcall
+  if (m/\G([a-zA-Z][a-zA-Z0-9_]*)\(/gc) {
+    my $func = $1;
+    _decode_value(\my $v);
+    m/\G\)/gc or _exception("Missing ) after funcall");
+    return $$r = $SELF->call($func, $v);
+  }
+
+  # heredoc
   if (m/\G<<-([A-Za-z.]+)/gc) {
     push @HERE_QUEUE, [$r, $1];
     return;
   }
 
   # Raw string
-  return $$r = $1 if m/\Graw\[(.*?)\]/gc;
-  return $$r = $1 if m/\Graw\{(.*?)\}/gc;
-  return $$r = $1 if m/\Graw\((.*?)\)/gc;
-  return $$r = $1 if m/\Graw!(.*?)!/gc;
-  return $$r = $1 if m/\Graw<(.*?)>/gc;
-  return $$r = $1 if m/\Graw'(.*?)'/gc;
-  return $$r = $1 if m/\Graw"(.*?)"/gc;
-
-  # Base64 string
-  if (m/\Gbase64\(([^']*)\)/gc) {
-    return $$r = MIME::Base64::decode_base64($1);
-  }
+  return $$r = $2 if m/\Gr('''|""""|'|")(.*?)\1/gc;
 
   # String
   return $$r = _decode_string() if m/\G"/gc;
@@ -329,10 +341,23 @@ JKML::PP - Just K markup language in pure perl
 
     use JKML::PP;
     decode_jkml(<<'...');
-    {
-        foo => raw(bar), # comment
-        baz => 5,
-    }
+    [
+      {
+        # heh.
+        input => 'hoghoge',
+        expected => 'hogehoge',
+        description => <<-EOF,
+        This markup language is human writable.
+        
+        JKML::PP supports following features:
+
+          * heredoc
+          * raw string.
+          * comments
+        EOF
+        regexp => r" ^^ \s+ ",
+      }
+    ]
     ...
 
 =head1 DESCRIPTION
@@ -364,12 +389,10 @@ You MUST use UTF-8 for every JKML data.
 JKML allows raw strings. Such as following:
 
     raw_string =
-          'raw(' .*? ')'
-        | 'raw"' .*? '"'
-        | "raw'" .*? "'"
-        | "raw[" .*? "]"
-        | "raw{" .*? "}"
-        | "raw<" .*? ">"
+          "r'" .*? "'"
+        | 'r"' .*? '"'
+        | 'r"""' .*? '"""'
+        | "r'''" .*? "'''"
 
 Every raw string literals does not care about non terminater characters.
 
@@ -377,17 +400,6 @@ Every raw string literals does not care about non terminater characters.
     raw(hoge)
     raw{hoge}
     raw!hoge!
-
-=item Base64 notation
-
-    base64 = "base64(" base85char ")"
-    base64char = [
-        ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
-    ]
-
-Example:
-
-    base64(...)
 
 =item Comments
 
@@ -459,6 +471,25 @@ Ruby style heredoc.
     null = "null"
 
 Will decode to C<undef>.
+
+=item Function call
+
+  funcall = ident "(" value ")"
+  ident = [a-zA-Z_] [a-zA-Z0-9_]*
+
+JKML supports some builtin functions.
+
+=back
+
+=head1 Builtin functions
+
+=over 4
+
+=item base64
+
+Decode base64 string.
+
+    base64(string)
 
 =back
 

@@ -3,50 +3,18 @@ use warnings;
 use utf8;
 use Test::More;
 use JKML::PP;
+use JSON::PP;
 
-is_deeply(decode_jkml(<<'...'), {});
-{
-}
-...
-is_deeply(decode_jkml(<<'...'), ['hogehoge']);
-[raw(hogehoge)]
-...
-is_deeply(decode_jkml(<<'...'), ['hogehoge', "h\\uh"]);
-[
-    raw(hogehoge),
-    raw(h\uh) # a
-]
-...
-is_deeply(decode_jkml(<<'...'), 'hogehoge');
-raw{hogehoge}
-...
-is_deeply(decode_jkml(<<'...'), 'hoge');
-base64(aG9nZQ==)
-...
-is_deeply(decode_jkml(<<'...'), [1,1]);
-[
-    raw(1), raw[1],
-]
-...
-is_deeply(decode_jkml(<<'...'), { b => 2 });
-{
-    b => 2,
+# run author/testdata.pl for update test cases.
 
-}
-...
-is_deeply(decode_jkml(<<'...'), "I'm here");
-<<-HERE
-I'm here
-HERE
-...
+open my $fh, '<', 't/data.json'
+    or die "Cannot open t/data.json for reading: $!";
+my $json = do { local $/; <$fh> };
+my @tests = @{JSON::PP::decode_json($json)};
 
-is_deeply(decode_jkml(<<'...'), { foo => "I'm here" });
-{
-    foo => <<-HERE,
-    I'm here
-    HERE
+while (my ($jkml, $data) = splice @tests, 0, 2) {
+    is_deeply(decode_jkml($jkml), $data, $jkml);
 }
-...
 
 done_testing;
 
