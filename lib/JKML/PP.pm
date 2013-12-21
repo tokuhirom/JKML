@@ -326,10 +326,6 @@ sub _exception {
   die "$context\n";
 }
 
-# Emulate boolean type
-package JKML::PP::_Bool;
-use overload '0+' => sub { ${$_[0]} }, '""' => sub { ${$_[0]} }, fallback => 1;
-
 1;
 __END__
 
