@@ -2,7 +2,10 @@ package JKML::PP;
 use 5.008005;
 use strict;
 use warnings;
+use parent qw(Exporter);
 use Encode ();
+
+our @EXPORT = qw(decode_jkml);
 
 our $VERSION = "0.01";
 
@@ -15,11 +18,6 @@ our $VERSION = "0.01";
 sub new {
   my $class = shift;
   bless {}, $class;
-}
-
-sub error {
-  $_[0]->{error} = $_[1] if @_ > 1;
-  return $_[0]->{error};
 }
 
 my $FALSE = bless \(my $false = 0), 'JKML::PP::_Bool';
@@ -59,20 +57,20 @@ my $SINGLE_LINE_COMMENT_RE = qr!//[^\n]+(\n|\z)!;
 my $NORMAL_COMMENT_RE = qr!/\*.*?\*/!s;
 my $IGNORABLE_RE = qr!(?:$WHITESPACE_RE|$SINGLE_LINE_COMMENT_RE|$NORMAL_COMMENT_RE)*!;
 
+sub decode_jkml { JKML::PP->new->decode(shift) }
+
+
 sub decode {
   my ($self, $bytes) = @_;
 
-  # Clean start
-  $self->error(undef);
-
   # Missing input
-  $self->error('Missing or empty input') and return undef unless $bytes; ## no critic (undef)
+  die 'Missing or empty input' unless $bytes;
 
   # Remove BOM
   $bytes =~ s/^(?:\357\273\277|\377\376\0\0|\0\0\376\377|\376\377|\377\376)//g;
 
   # Wide characters
-  $self->error('Wide character in input') and return undef ## no critic (undef)
+  die 'Wide character in input'
     unless utf8::downgrade($bytes, 1);
 
   # Detect and decode Unicode
@@ -111,7 +109,7 @@ sub decode {
   # Exception
   if (!$res && (my $e = $@)) {
     chomp $e;
-    $self->error($e);
+    die $e;
   }
 
   return $res;
