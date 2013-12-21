@@ -398,10 +398,10 @@ JKML allows raw strings. Such as following:
 
 Every raw string literals does not care about non terminater characters.
 
-    raw[hoge]
-    raw(hoge)
-    raw{hoge}
-    raw!hoge!
+  r'hoge'
+  r"hoge"
+  r"""hoge"""
+  r'''hoge'''
 
 =item Comments
 
