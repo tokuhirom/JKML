@@ -187,13 +187,14 @@ sub _decode_object {
 }
 
 sub _decode_string {
+  my $quote = shift;
   my $pos = pos;
   # Extract string with escaped characters
-  m!\G((?:(?:[^\x00-\x1f\\"]|\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})){0,32766})*)!gc; # segfault on 5.8.x in t/20-mojo-json.t #83
+  m!\G((?:(?:[^\x00-\x1f\\${quote}]|\\(?:[${quote}\\/bfnrt]|u[0-9a-fA-F]{4})){0,32766})*)!gc; # segfault on 5.8.x in t/20-mojo-json.t #83
   my $str = $1;
 
   # Invalid character
-  unless (m/\G"/gc) {
+  unless (m/\G${quote}/gc) {
     _exception('Unexpected character or invalid escape while parsing string')
       if m/\G[\x00-\x1f\\]/;
     _exception('Unterminated string');
@@ -284,7 +285,7 @@ sub _decode_value {
   return $$r = $2 if m/\Gr('''|""""|'|")(.*?)\1/gc;
 
   # String
-  return $$r = _decode_string() if m/\G"/gc;
+  return $$r = _decode_string($1) if m/\G(["'])/gc;
 
   # Array
   return $$r = _decode_array() if m/\G\[/gc;
@@ -411,9 +412,32 @@ Perl5 style comemnt is allowed.
 
 =item String
 
-String literal is compatible with JSON. See JSON RFC.
+String literal is compatible with JSON.
 
-    "Hello, \u3344"
+        string = sqstring | dqstring
+
+         dqstring = '"' dqchar* '"'
+         sqstring = "'" sqchar* "'"
+
+         dqchar = unescaped | "'" | escaped
+         sqchar = unescaped | '"' | escaped
+
+         escaped = escape (
+                    %x22 /          ; "    quotation mark  U+0022
+                    %x5C /          ; \    reverse solidus U+005C
+                    %x2F /          ; /    solidus         U+002F
+                    %x62 /          ; b    backspace       U+0008
+                    %x66 /          ; f    form feed       U+000C
+                    %x6E /          ; n    line feed       U+000A
+                    %x72 /          ; r    carriage return U+000D
+                    %x74 /          ; t    tab             U+0009
+                    %x75 4HEXDIG )  ; uXXXX                U+XXXX
+
+         escape = %x5C              ; \
+
+         quotation-mark = %x22      ; "
+
+         unescaped = [^"'\]
 
 =item Number
 
@@ -462,7 +486,7 @@ Ruby style heredoc.
 
 =item Value
 
-    value = map | array | string | raw_string | number
+    value = map | array | string | raw_string | number | funcall
 
 =item Boolean
 

@@ -36,5 +36,9 @@
    "[null]\n",
    [
       null
-   ]
+   ],
+   "\"hoge'fuga\"\n",
+   "hoge'fuga",
+   "'hoge\"fuga'\n",
+   "hoge\"fuga"
 ]

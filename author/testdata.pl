@@ -61,6 +61,12 @@ true
     <<'...', [undef],
 [null]
 ...
+    <<'...', "hoge'fuga",
+"hoge'fuga"
+...
+    <<'...', 'hoge"fuga',
+'hoge"fuga'
+...
 );
 
 my $json = JSON::PP->new->pretty(1)->encode(\@tests);
