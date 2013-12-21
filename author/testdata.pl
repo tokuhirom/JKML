@@ -55,6 +55,9 @@ HERE
   y
   HERE
 ...
+    <<'...', JSON::PP::true(),
+true
+...
 );
 
 my $json = JSON::PP->new->pretty(1)->encode(\@tests);

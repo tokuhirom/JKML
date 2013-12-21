@@ -5,6 +5,7 @@ use warnings;
 use parent qw(Exporter);
 use Encode ();
 use MIME::Base64 ();
+use Types::Serialiser;
 
 our @EXPORT = qw(decode_jkml);
 
@@ -37,8 +38,8 @@ sub call {
   $code->($vref);
 }
 
-my $FALSE = bless \(my $false = 0), 'JKML::PP::_Bool';
-my $TRUE  = bless \(my $true  = 1), 'JKML::PP::_Bool';
+my $TRUE  = $Types::Serialiser::true;
+my $FALSE = $Types::Serialiser::false;
 
 # Escaped special character map (with u2028 and u2029)
 my %ESCAPE = (
