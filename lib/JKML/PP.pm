@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use parent qw(Exporter);
 use Encode ();
+use MIME::Base64 ();
 
 our @EXPORT = qw(decode_jkml);
 
@@ -36,26 +37,10 @@ my %ESCAPE = (
   'u2028' => "\x{2028}",
   'u2029' => "\x{2029}"
 );
-my %REVERSE = map { $ESCAPE{$_} => "\\$_" } keys %ESCAPE;
-
-for( 0x00 .. 0x1f, 0x7f ) {
-  my $packed = pack 'C', $_;
-  $REVERSE{$packed} = sprintf '\u%.4X', $_
-    if ! defined( $REVERSE{$packed} );
-}
-
-# Unicode encoding detection
-my $UTF_PATTERNS = {
-  'UTF-32BE' => qr/^\x00{3}[^\x00]/,
-  'UTF-32LE' => qr/^[^\x00]\x00{3}/,
-  'UTF-16BE' => qr/^(?:\x00[^\x00]){2}/,
-  'UTF-16LE' => qr/^(?:[^\x00]\x00){2}/
-};
 
 my $WHITESPACE_RE = qr/[\x20\x09\x0a\x0d]/;
-my $SINGLE_LINE_COMMENT_RE = qr!//[^\n]+(\n|\z)!;
-my $NORMAL_COMMENT_RE = qr!/\*.*?\*/!s;
-my $IGNORABLE_RE = qr!(?:$WHITESPACE_RE|$SINGLE_LINE_COMMENT_RE|$NORMAL_COMMENT_RE)*!;
+my $COMMENT_RE = qr!#[^\n]+(?:\n|\z)!;
+my $IGNORABLE_RE = qr!(?:$WHITESPACE_RE|$COMMENT_RE)*!;
 
 sub decode_jkml { JKML::PP->new->decode(shift) }
 
@@ -66,19 +51,9 @@ sub decode {
   # Missing input
   die 'Missing or empty input' unless $bytes;
 
-  # Remove BOM
-  $bytes =~ s/^(?:\357\273\277|\377\376\0\0|\0\0\376\377|\376\377|\377\376)//g;
-
   # Wide characters
   die 'Wide character in input'
     unless utf8::downgrade($bytes, 1);
-
-  # Detect and decode Unicode
-  my $encoding = 'UTF-8';
-  $bytes =~ $UTF_PATTERNS->{$_} and $encoding = $_ for keys %$UTF_PATTERNS;
-
-  my $d_res = eval { $bytes = Encode::decode($encoding, $bytes, 1); 1 };
-  $bytes = undef unless $d_res;
 
   # Object or array
   my $res = eval {
@@ -88,18 +63,11 @@ sub decode {
     m/\G$IGNORABLE_RE/gc;
 
     # Array
-    my $ref;
-    if (m/\G\[/gc) { $ref = _decode_array() }
-
-    # Object
-    elsif (m/\G\{/gc) { $ref = _decode_object() }
-
-    # Invalid character
-    else { _exception('Expected array or object') }
+    my $ref = _decode_value();
 
     # Leftover data
     unless (m/\G$IGNORABLE_RE\z/gc) {
-      my $got = ref $ref eq 'ARRAY' ? 'array' : 'object';
+      my $got = ref $ref ? lc(ref($ref)) : 'scalar';
       _exception("Unexpected data after $got");
     }
 
@@ -127,10 +95,15 @@ sub _decode_array {
     push @array, _decode_value();
 
     # Separator
-    redo if m/\G$IGNORABLE_RE,/gc;
+    my $found_separator = 0;
+    if (m/\G$IGNORABLE_RE,/gc) {
+        $found_separator++;
+    }
 
     # End
     last if m/\G$IGNORABLE_RE\]/gc;
+
+    redo if $found_separator;
 
     # Invalid character
     _exception('Expected comma or right square bracket while parsing array');
@@ -142,26 +115,34 @@ sub _decode_array {
 sub _decode_object {
   my %hash;
   until (m/\G$IGNORABLE_RE\}/gc) {
-
-    # Quote
-    m/\G$IGNORABLE_RE"/gc
-      or _exception('Expected string while parsing object');
-
     # Key
-    my $key = _decode_string();
+    my $key = do {
+      if (m/\G$IGNORABLE_RE([A-Za-z][a-zA-Z0-9_]*)/gc) {
+        $1;
+      } else {
+        # Quote
+        m/\G$IGNORABLE_RE"/gc
+            or _exception('Expected string while parsing object');
+
+        _decode_string();
+      }
+    };
 
     # Colon
-    m/\G$IGNORABLE_RE:/gc
-      or _exception('Expected colon while parsing object');
+    m/\G$IGNORABLE_RE=>/gc
+      or _exception('Expected "=>" while parsing object');
 
     # Value
     $hash{$key} = _decode_value();
 
     # Separator
-    redo if m/\G$IGNORABLE_RE,/gc;
+    my $found_separator = 0;
+    $found_separator++ if m/\G$IGNORABLE_RE,/gc;
 
     # End
     last if m/\G$IGNORABLE_RE\}/gc;
+
+    redo if $found_separator;
 
     # Invalid character
     _exception('Expected comma or right curly bracket while parsing object');
@@ -231,10 +212,18 @@ sub _decode_value {
   m/\G$IGNORABLE_RE/gc;
 
   # Raw string
-  return $1 if m/\Gr"(.*?)"/gc;
-  return $1 if m/\Gr'(.*?)'/gc;
-  return $1 if m/\Gr'''(.*?)'''/gc;
-  return $1 if m/\Gr"""(.*?)"""/gc;
+  return $1 if m/\Graw\[(.*?)\]/gc;
+  return $1 if m/\Graw\{(.*?)\}/gc;
+  return $1 if m/\Graw\((.*?)\)/gc;
+  return $1 if m/\Graw!(.*?)!/gc;
+  return $1 if m/\Graw<(.*?)>/gc;
+  return $1 if m/\Graw'(.*?)'/gc;
+  return $1 if m/\Graw"(.*?)"/gc;
+
+  # Base64 string
+  if (m/\Gbase64\(([^']*)\)/gc) {
+    return MIME::Base64::decode_base64($1);
+  }
 
   # String
   return _decode_string() if m/\G"/gc;
@@ -289,15 +278,23 @@ __END__
 
 =head1 NAME
 
-JKML::PP - It's new $module
+JKML::PP - Just K markup language in pure perl
 
 =head1 SYNOPSIS
 
     use JKML::PP;
+    decode_jkml(<<'...');
+    {
+        foo => raw(bar), # comment
+        baz => 5,
+    }
+    ...
 
 =head1 DESCRIPTION
 
-JKML::PP is parser library for JKML. JKML is extended version of JSON.
+JKML::PP is parser library for JKML. JKML is yet another markup language.
+
+=head2 What's difference between JSON?
 
 JKML extends following features:
 
@@ -305,27 +302,110 @@ JKML extends following features:
 
 =item Raw strings
 
+=item Comments
+
+=back
+
+=head1 JKML and encoding
+
+You MUST use UTF-8 for every JKML data.
+
+=head1 JKML Grammar
+
+=over 4
+
+=item Raw strings
+
 JKML allows raw strings. Such as following:
 
-    r"hoge"
-    r'hoge'
-    r"""hoge"""
-    r'''hoge'''
+    raw_string =
+          'raw(' .*? ')'
+        | 'raw"' .*? '"'
+        | "raw'" .*? "'"
+        | "raw[" .*? "]"
+        | "raw{" .*? "}"
+        | "raw<" .*? ">"
 
 Every raw string literals does not care about non terminater characters.
 
-It likes Python's.
+    raw[hoge]
+    raw(hoge)
+    raw{hoge}
+    raw!hoge!
+
+=item Base64 notation
+
+    base64 = "base64(" base85char ")"
+    base64char = [
+        ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+    ]
+
+Example:
+
+    base64(...)
 
 =item Comments
 
-JKML allows comments in the notation.
+Perl5 style comemnt is allowed.
+
+    # comment
+
+=item String
+
+String literal is compatible with JSON. See JSON RFC.
+
+    "Hello, \u3344"
+
+=item Number
+
+Number literal is compatible with JSON. See JSON RFC.
+
+    3
+    3.14
+    3e14
+
+=item Map
+
+Map literal's grammar is:
+
+    pair = string "=>" value
+    map = "{" "}"
+        | "{" pair ( "," pair )* ","?  "}"
+
+You can omit quotes for keys, if you don't want to type it.
+
+You can use trailing comma unlike JS.
+
+Examples:
 
     {
-        "foo": "bar", /*
-            hogehoge
-        */
-        "baz": "boz", // single line comment
+        a => 3,
+        "b" => 4,
     }
+
+=item Array
+
+    array = "[" "]"
+          | "[" value ( "," value )* ","? "]"
+
+Examples:
+
+    [1,2,3]
+    [1,2,3,]
+
+=item Value
+
+    value = map | array | string | raw_string | number
+
+=item Boolean
+
+    bool = "true" | "false"
+
+=item NULL
+
+    null = "null"
+
+Will decode to C<undef>.
 
 =back
 

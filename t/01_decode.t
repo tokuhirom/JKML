@@ -9,21 +9,29 @@ is_deeply(decode_jkml(<<'...'), {});
 }
 ...
 is_deeply(decode_jkml(<<'...'), ['hogehoge']);
-[r"hogehoge"]
+[raw(hogehoge)]
 ...
 is_deeply(decode_jkml(<<'...'), ['hogehoge', "h\\uh"]);
 [
-    r"hogehoge",
-    r'h\uh' // a
+    raw(hogehoge),
+    raw(h\uh) # a
 ]
 ...
-is_deeply(decode_jkml(<<'...'), ['hogehoge', "h\\uh"]);
+is_deeply(decode_jkml(<<'...'), 'hogehoge');
+raw{hogehoge}
+...
+is_deeply(decode_jkml(<<'...'), 'hoge');
+base64(aG9nZQ==)
+...
+is_deeply(decode_jkml(<<'...'), [1,1]);
 [
-    r"hogehoge"/*
-        heh
-    */,
-    r'h\uh' // a
+    raw(1), raw[1],
 ]
+...
+is_deeply(decode_jkml(<<'...'), { b => 2 });
+{
+    b => 2,
+}
 ...
 
 done_testing;
