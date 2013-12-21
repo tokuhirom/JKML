@@ -6,8 +6,10 @@ use parent qw(Exporter);
 use Encode ();
 use MIME::Base64 ();
 use Types::Serialiser;
+use B ();
+use Scalar::Util ();
 
-our @EXPORT = qw(decode_jkml);
+our @EXPORT = qw(decode_jkml encode_jkml);
 
 our $VERSION = "0.01";
 
@@ -54,6 +56,13 @@ my %ESCAPE = (
   'u2028' => "\x{2028}",
   'u2029' => "\x{2029}"
 );
+my %REVERSE = map { $ESCAPE{$_} => "\\$_" } keys %ESCAPE;
+
+for( 0x00 .. 0x1f, 0x7f ) {
+  my $packed = pack 'C', $_;
+  $REVERSE{$packed} = sprintf '\u%.4X', $_
+    if ! defined( $REVERSE{$packed} );
+}
 
 my $WHITESPACE_RE = qr/[\x20\x09]/;
 my $COMMENT_RE = qr!#[^\n]*(?:\n|\z)!;
@@ -61,6 +70,7 @@ my $IGNORABLE_RE = qr!(?:$WHITESPACE_RE|$COMMENT_RE)*!;
 my $LEFTOVER_RE = qr!(?:$WHITESPACE_RE|$COMMENT_RE|[\x0d\x0a])*!;
 
 sub decode_jkml { JKML::PP->new->decode(shift) }
+sub encode_jkml { JKML::PP->new->encode(shift) }
 
 
 sub decode {
@@ -324,6 +334,62 @@ sub _exception {
   }
 
   die "$context\n";
+}
+
+# -------------------------------------------------------------------------
+
+sub encode {
+  my ($self, $ref) = @_;
+  return Encode::encode 'UTF-8', _encode_value($ref);
+}
+
+sub _encode_array {
+  my $array = shift;
+  return '[' . join(',', map { _encode_value($_) } @$array) . ']';
+}
+
+sub _encode_object {
+  my $object = shift;
+  my @pairs = map { _encode_string($_) . '=>' . _encode_value($object->{$_}) }
+    keys %$object;
+  return '{' . join(',', @pairs) . '}';
+}
+
+sub _encode_string {
+  my $str = shift;
+  $str =~ s!([\x00-\x1f\x7f\x{2028}\x{2029}\\"/\b\f\n\r\t])!$REVERSE{$1}!gs;
+  return "\"$str\"";
+}
+
+sub _encode_value {
+  my $value = shift;
+
+  # Reference
+  if (my $ref = ref $value) {
+
+    # Array
+    return _encode_array($value) if $ref eq 'ARRAY';
+
+    # Object
+    return _encode_object($value) if $ref eq 'HASH';
+
+    # True or false
+    return Types::Serialiser::is_true($value)  ? 'true' : 'false' if Types::Serialiser::is_bool($ref);
+
+    # References to scalars (including blessed) will be encoded as Booleans.
+    return $$value ? 'true' : 'false' if $ref =~ /SCALAR/;
+
+  }
+
+  # Null
+  return 'null' unless defined $value;
+
+  # Number
+  my $flags = B::svref_2object(\$value)->FLAGS;
+  return 0 + $value if $flags & (B::SVp_IOK | B::SVp_NOK) && $value * 0 == 0;
+
+  # String
+  return _encode_string($value);
 }
 
 1;
