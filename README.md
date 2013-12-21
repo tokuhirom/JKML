@@ -5,11 +5,26 @@ JKML::PP - Just K markup language in pure perl
 # SYNOPSIS
 
     use JKML::PP;
+
     decode_jkml(<<'...');
-    {
-        foo => raw(bar), # comment
-        baz => 5,
-    }
+    [
+      {
+        # heh.
+        input => "hoghoge",
+        expected => "hogehoge",
+        description => <<-EOF,
+        This markup language is human writable.
+        
+
+        JKML::PP supports following features:
+
+          * heredoc
+          * raw string.
+          * comments
+        EOF
+        regexp => r" ^^ \s+ ",
+      }
+    ]
     ...
 
 # DESCRIPTION
@@ -34,12 +49,10 @@ You MUST use UTF-8 for every JKML data.
     JKML allows raw strings. Such as following:
 
         raw_string =
-              'raw(' .*? ')'
-            | 'raw"' .*? '"'
-            | "raw'" .*? "'"
-            | "raw[" .*? "]"
-            | "raw{" .*? "}"
-            | "raw<" .*? ">"
+              "r'" .*? "'"
+            | 'r"' .*? '"'
+            | 'r"""' .*? '"""'
+            | "r'''" .*? "'''"
 
     Every raw string literals does not care about non terminater characters.
 
@@ -47,17 +60,6 @@ You MUST use UTF-8 for every JKML data.
         raw(hoge)
         raw{hoge}
         raw!hoge!
-
-- Base64 notation
-
-        base64 = "base64(" base85char ")"
-        base64char = [
-            ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
-        ]
-
-    Example:
-
-        base64(...)
 
 - Comments
 
@@ -127,6 +129,21 @@ You MUST use UTF-8 for every JKML data.
         null = "null"
 
     Will decode to `undef`.
+
+- Function call
+
+        funcall = ident "(" value ")"
+        ident = [a-zA-Z_] [a-zA-Z0-9_]*
+
+    JKML supports some builtin functions.
+
+# Builtin functions
+
+- base64
+
+    Decode base64 string.
+
+        base64(string)
 
 # AUTHOR
 

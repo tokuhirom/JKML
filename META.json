@@ -43,11 +43,13 @@
       },
       "runtime" : {
          "requires" : {
+            "Types::Serializer" : "0",
             "perl" : "5.008005"
          }
       },
       "test" : {
          "requires" : {
+            "JSON::PP" : "0",
             "Test::More" : "0.98"
          }
       }

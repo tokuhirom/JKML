@@ -346,8 +346,8 @@ JKML::PP - Just K markup language in pure perl
     [
       {
         # heh.
-        input => 'hoghoge',
-        expected => 'hogehoge',
+        input => "hoghoge",
+        expected => "hogehoge",
         description => <<-EOF,
         This markup language is human writable.
         
