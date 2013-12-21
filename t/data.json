@@ -28,5 +28,7 @@
    "{\n    foo => <<-HERE,\n    I'm here\n    HERE\n}\n",
    {
       "foo" : "I'm here"
-   }
+   },
+   "  <<-HERE\n  x\n  y\n  HERE\n",
+   "x\ny"
 ]

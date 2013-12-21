@@ -248,7 +248,7 @@ sub _skip_space {
         if (m/\G(.*?)^([ \t]*)$terminator$/gcsm) {
           my $buf = $1;
           my $dedent = $2;
-          $buf =~ s/^$dedent//m;
+          $buf =~ s/^$dedent//mg;
           $buf =~ s/\n\z//;
           $$v = $buf;
         } else {
@@ -340,6 +340,7 @@ JKML::PP - Just K markup language in pure perl
 =head1 SYNOPSIS
 
     use JKML::PP;
+
     decode_jkml(<<'...');
     [
       {

@@ -49,6 +49,12 @@ HERE
     HERE
 }
 ...
+    <<'...', "x\ny",
+  <<-HERE
+  x
+  y
+  HERE
+...
 );
 
 my $json = JSON::PP->new->pretty(1)->encode(\@tests);
