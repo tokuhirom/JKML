@@ -1,5 +1,5 @@
 {
-   "abstract" : "It's new $module",
+   "abstract" : "Just K markup language in pure perl",
    "author" : [
       "tokuhirom <tokuhirom@gmail.com>"
    ],
@@ -53,5 +53,16 @@
       }
    },
    "release_status" : "unstable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/tokuhirom/JKML-PP/issues"
+      },
+      "homepage" : "https://github.com/tokuhirom/JKML-PP",
+      "repository" : {
+         "type" : "git",
+         "url" : "git://github.com/tokuhirom/JKML-PP.git",
+         "web" : "https://github.com/tokuhirom/JKML-PP"
+      }
+   },
    "version" : "0.01"
 }

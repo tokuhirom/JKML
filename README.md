@@ -1,40 +1,124 @@
 # NAME
 
-JKML::PP - It's new $module
+JKML::PP - Just K markup language in pure perl
 
 # SYNOPSIS
 
     use JKML::PP;
+    decode_jkml(<<'...');
+    {
+        foo => raw(bar), # comment
+        baz => 5,
+    }
+    ...
 
 # DESCRIPTION
 
-JKML::PP is parser library for JKML. JKML is extended version of JSON.
+JKML::PP is parser library for JKML. JKML is yet another markup language.
+
+## What's difference between JSON?
 
 JKML extends following features:
+
+- Raw strings
+- Comments
+
+# JKML and encoding
+
+You MUST use UTF-8 for every JKML data.
+
+# JKML Grammar
 
 - Raw strings
 
     JKML allows raw strings. Such as following:
 
-        r"hoge"
-        r'hoge'
-        r"""hoge"""
-        r'''hoge'''
+        raw_string =
+              'raw(' .*? ')'
+            | 'raw"' .*? '"'
+            | "raw'" .*? "'"
+            | "raw[" .*? "]"
+            | "raw{" .*? "}"
+            | "raw<" .*? ">"
 
     Every raw string literals does not care about non terminater characters.
 
-    It likes Python's.
+        raw[hoge]
+        raw(hoge)
+        raw{hoge}
+        raw!hoge!
+
+- Base64 notation
+
+        base64 = "base64(" base85char ")"
+        base64char = [
+            ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+        ]
+
+    Example:
+
+        base64(...)
 
 - Comments
 
-    JKML allows comments in the notation.
+    Perl5 style comemnt is allowed.
+
+        # comment
+
+- String
+
+    String literal is compatible with JSON. See JSON RFC.
+
+        "Hello, \u3344"
+
+- Number
+
+    Number literal is compatible with JSON. See JSON RFC.
+
+        3
+        3.14
+        3e14
+
+- Map
+
+    Map literal's grammar is:
+
+        pair = string "=>" value
+        map = "{" "}"
+            | "{" pair ( "," pair )* ","?  "}"
+
+    You can omit quotes for keys, if you don't want to type it.
+
+    You can use trailing comma unlike JS.
+
+    Examples:
 
         {
-            "foo": "bar", /*
-                hogehoge
-            */
-            "baz": "boz", // single line comment
+            a => 3,
+            "b" => 4,
         }
+
+- Array
+
+        array = "[" "]"
+              | "[" value ( "," value )* ","? "]"
+
+    Examples:
+
+        [1,2,3]
+        [1,2,3,]
+
+- Value
+
+        value = map | array | string | raw_string | number
+- Boolean
+
+        bool = "true" | "false"
+- NULL
+
+        null = "null"
+
+    Will decode to `undef`.
 
 # AUTHOR
 
