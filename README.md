@@ -56,10 +56,10 @@ You MUST use UTF-8 for every JKML data.
 
     Every raw string literals does not care about non terminater characters.
 
-        raw[hoge]
-        raw(hoge)
-        raw{hoge}
-        raw!hoge!
+        r'hoge'
+        r"hoge"
+        r"""hoge"""
+        r'''hoge'''
 
 - Comments
 
@@ -69,9 +69,32 @@ You MUST use UTF-8 for every JKML data.
 
 - String
 
-    String literal is compatible with JSON. See JSON RFC.
+    String literal is compatible with JSON.
 
-        "Hello, \u3344"
+            string = sqstring | dqstring
+
+             dqstring = '"' dqchar* '"'
+             sqstring = "'" sqchar* "'"
+
+             dqchar = unescaped | "'" | escaped
+             sqchar = unescaped | '"' | escaped
+
+             escaped = escape (
+                        %x22 /          ; "    quotation mark  U+0022
+                        %x5C /          ; \    reverse solidus U+005C
+                        %x2F /          ; /    solidus         U+002F
+                        %x62 /          ; b    backspace       U+0008
+                        %x66 /          ; f    form feed       U+000C
+                        %x6E /          ; n    line feed       U+000A
+                        %x72 /          ; r    carriage return U+000D
+                        %x74 /          ; t    tab             U+0009
+                        %x75 4HEXDIG )  ; uXXXX                U+XXXX
+
+             escape = %x5C              ; \
+
+             quotation-mark = %x22      ; "
+
+             unescaped = [^"'\]
 
 - Number
 
@@ -120,7 +143,7 @@ You MUST use UTF-8 for every JKML data.
 
 - Value
 
-        value = map | array | string | raw_string | number
+        value = map | array | string | raw_string | number | funcall
 - Boolean
 
         bool = "true" | "false"
