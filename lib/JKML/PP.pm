@@ -331,9 +331,13 @@ JKML allows comments in the notation.
 
 =back
 
+=head1 AUTHOR
+
+tokuhirom E<lt>tokuhirom@gmail.comE<gt>
+
 =head1 LICENSE
 
-Copyright (C) tokuhirom at, el.
+Copyright (C) tokuhirom
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -345,9 +349,6 @@ Copyright 2012-2013 David Oswald.
 This program is free software, you can redistribute it and/or modify it under the terms of the Artistic License version 2.0.
 See http://www.perlfoundation.org/artistic_license_2_0 for more information.
 
-=head1 AUTHOR
-
-tokuhirom E<lt>tokuhirom@gmail.comE<gt>
 
 =cut
 
