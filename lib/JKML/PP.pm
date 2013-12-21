@@ -10,6 +10,8 @@ our @EXPORT = qw(decode_jkml);
 
 our $VERSION = "0.01";
 
+our @HERE_QUEUE;
+
 # JKML::PP is based on JSON::Tiny.
 # JSON::Tiny was "Adapted from Mojo::JSON and Mojo::Util".
 
@@ -38,9 +40,10 @@ my %ESCAPE = (
   'u2029' => "\x{2029}"
 );
 
-my $WHITESPACE_RE = qr/[\x20\x09\x0a\x0d]/;
-my $COMMENT_RE = qr!#[^\n]+(?:\n|\z)!;
+my $WHITESPACE_RE = qr/[\x20\x09]/;
+my $COMMENT_RE = qr!#[^\n]*(?:\n|\z)!;
 my $IGNORABLE_RE = qr!(?:$WHITESPACE_RE|$COMMENT_RE)*!;
+my $LEFTOVER_RE = qr!(?:$WHITESPACE_RE|$COMMENT_RE|[\x0d\x0a])*!;
 
 sub decode_jkml { JKML::PP->new->decode(shift) }
 
@@ -60,13 +63,15 @@ sub decode {
     local $_ = $bytes;
 
     # Leading whitespace
-    m/\G$IGNORABLE_RE/gc;
+    _skip_space();
 
-    # Array
-    my $ref = _decode_value();
+    # value
+    my $ref;
+    _decode_value(\$ref);
 
     # Leftover data
-    unless (m/\G$IGNORABLE_RE\z/gc) {
+    _skip_space();
+    unless (pos() == length($_)) {
       my $got = ref $ref ? lc(ref($ref)) : 'scalar';
       _exception("Unexpected data after $got");
     }
@@ -89,20 +94,26 @@ sub true {$TRUE}
 
 sub _decode_array {
   my @array;
-  until (m/\G$IGNORABLE_RE\]/gc) {
+  _skip_space();
+  until (m/\G\]/gc) {
 
     # Value
-    push @array, _decode_value();
+    my $v;
+    _decode_value(\$v);
+    push @array, $v;
 
     # Separator
     my $found_separator = 0;
-    if (m/\G$IGNORABLE_RE,/gc) {
+    _skip_space();
+    if (m/\G,/gc) {
         $found_separator++;
     }
 
     # End
-    last if m/\G$IGNORABLE_RE\]/gc;
+    _skip_space();
+    last if m/\G\]/gc;
 
+    _skip_space();
     redo if $found_separator;
 
     # Invalid character
@@ -114,14 +125,16 @@ sub _decode_array {
 
 sub _decode_object {
   my %hash;
-  until (m/\G$IGNORABLE_RE\}/gc) {
+  _skip_space();
+  until (m/\G\}/gc) {
     # Key
     my $key = do {
-      if (m/\G$IGNORABLE_RE([A-Za-z][a-zA-Z0-9_]*)/gc) {
+      _skip_space();
+      if (m/\G([A-Za-z][a-zA-Z0-9_]*)/gc) {
         $1;
       } else {
         # Quote
-        m/\G$IGNORABLE_RE"/gc
+        m/\G"/gc
             or _exception('Expected string while parsing object');
 
         _decode_string();
@@ -129,19 +142,23 @@ sub _decode_object {
     };
 
     # Colon
-    m/\G$IGNORABLE_RE=>/gc
+    _skip_space();
+    m/\G=>/gc
       or _exception('Expected "=>" while parsing object');
 
     # Value
-    $hash{$key} = _decode_value();
+    _decode_value(\$hash{$key});
 
     # Separator
+    _skip_space();
     my $found_separator = 0;
-    $found_separator++ if m/\G$IGNORABLE_RE,/gc;
+    $found_separator++ if m/\G,/gc;
 
     # End
-    last if m/\G$IGNORABLE_RE\}/gc;
+    _skip_space();
+    last if m/\G\}/gc;
 
+    _skip_space();
     redo if $found_separator;
 
     # Invalid character
@@ -156,6 +173,8 @@ sub _decode_string {
   # Extract string with escaped characters
   m!\G((?:(?:[^\x00-\x1f\\"]|\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})){0,32766})*)!gc; # segfault on 5.8.x in t/20-mojo-json.t #83
   my $str = $1;
+
+  local @HERE_QUEUE;
 
   # Invalid character
   unless (m/\G"/gc) {
@@ -206,46 +225,72 @@ sub _decode_string {
   return $buffer . substr $str, pos($str), length($str);
 }
 
+sub _skip_space {
+  while (m/\G$IGNORABLE_RE/gc) {
+    if (m/\G\x0d?\x0a/gc) {
+      if (@HERE_QUEUE) {
+        my ($v, $terminator) = @{pop @HERE_QUEUE};
+        if (m/\G(.*?)^([ \t]*)$terminator$/gcsm) {
+          my $buf = $1;
+          my $dedent = $2;
+          $buf =~ s/^$dedent//m;
+          $buf =~ s/\n\z//;
+          $$v = $buf;
+        } else {
+          _exception("Unexpected EOF in heredoc: '$terminator'");
+        }
+      }
+    }
+  }
+}
+
 sub _decode_value {
+  my $r = shift;
 
   # Leading whitespace
-  m/\G$IGNORABLE_RE/gc;
+  _skip_space();
+
+  # dedent()
+  if (m/\G<<-([A-Za-z.]+)/gc) {
+    push @HERE_QUEUE, [$r, $1];
+    return;
+  }
 
   # Raw string
-  return $1 if m/\Graw\[(.*?)\]/gc;
-  return $1 if m/\Graw\{(.*?)\}/gc;
-  return $1 if m/\Graw\((.*?)\)/gc;
-  return $1 if m/\Graw!(.*?)!/gc;
-  return $1 if m/\Graw<(.*?)>/gc;
-  return $1 if m/\Graw'(.*?)'/gc;
-  return $1 if m/\Graw"(.*?)"/gc;
+  return $$r = $1 if m/\Graw\[(.*?)\]/gc;
+  return $$r = $1 if m/\Graw\{(.*?)\}/gc;
+  return $$r = $1 if m/\Graw\((.*?)\)/gc;
+  return $$r = $1 if m/\Graw!(.*?)!/gc;
+  return $$r = $1 if m/\Graw<(.*?)>/gc;
+  return $$r = $1 if m/\Graw'(.*?)'/gc;
+  return $$r = $1 if m/\Graw"(.*?)"/gc;
 
   # Base64 string
   if (m/\Gbase64\(([^']*)\)/gc) {
-    return MIME::Base64::decode_base64($1);
+    return $$r = MIME::Base64::decode_base64($1);
   }
 
   # String
-  return _decode_string() if m/\G"/gc;
+  return $$r = _decode_string() if m/\G"/gc;
 
   # Array
-  return _decode_array() if m/\G\[/gc;
+  return $$r = _decode_array() if m/\G\[/gc;
 
   # Object
-  return _decode_object() if m/\G\{/gc;
+  return $$r = _decode_object() if m/\G\{/gc;
 
   # Number
-  return 0 + $1
+  return $$r = 0 + $1
     if m/\G([-]?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?)/gc;
 
   # True
-  return $TRUE if m/\Gtrue/gc;
+  return $$r = $TRUE if m/\Gtrue/gc;
 
   # False
-  return $FALSE if m/\Gfalse/gc;
+  return $$r = $FALSE if m/\Gfalse/gc;
 
   # Null
-  return undef if m/\Gnull/gc;  ## no critic (return)
+  return $$r = undef if m/\Gnull/gc;  ## no critic (return)
 
   # Invalid character
   _exception('Expected string, array, object, number, boolean or null');
@@ -254,7 +299,7 @@ sub _decode_value {
 sub _exception {
 
   # Leading whitespace
-  m/\G$IGNORABLE_RE/gc;
+  _skip_space();
 
   # Context
   my $context = 'Malformed JKML: ' . shift;
@@ -392,6 +437,14 @@ Examples:
 
     [1,2,3]
     [1,2,3,]
+
+=item heredoc
+
+Ruby style heredoc.
+
+    <<-TOC
+    hoghoge
+    TOC
 
 =item Value
 

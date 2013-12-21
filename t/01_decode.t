@@ -31,6 +31,20 @@ is_deeply(decode_jkml(<<'...'), [1,1]);
 is_deeply(decode_jkml(<<'...'), { b => 2 });
 {
     b => 2,
+
+}
+...
+is_deeply(decode_jkml(<<'...'), "I'm here");
+<<-HERE
+I'm here
+HERE
+...
+
+is_deeply(decode_jkml(<<'...'), { foo => "I'm here" });
+{
+    foo => <<-HERE,
+    I'm here
+    HERE
 }
 ...
 
