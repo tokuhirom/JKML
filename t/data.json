@@ -32,5 +32,9 @@
    "  <<-HERE\n  x\n  y\n  HERE\n",
    "x\ny",
    "true\n",
-   true
+   true,
+   "[null]\n",
+   [
+      null
+   ]
 ]
