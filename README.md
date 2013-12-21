@@ -108,6 +108,14 @@ You MUST use UTF-8 for every JKML data.
         [1,2,3]
         [1,2,3,]
 
+- heredoc
+
+    Ruby style heredoc.
+
+        <<-TOC
+        hoghoge
+        TOC
+
 - Value
 
         value = map | array | string | raw_string | number
@@ -132,6 +140,8 @@ This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 ## JSON::Tiny LICENSE
+
+This library uses JSON::Tiny's code. JSON::Tiny's license term is following:
 
 Copyright 2012-2013 David Oswald.
 
