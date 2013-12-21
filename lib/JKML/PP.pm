@@ -422,6 +422,8 @@ it under the same terms as Perl itself.
 
 =head2 JSON::Tiny LICENSE
 
+This library uses JSON::Tiny's code. JSON::Tiny's license term is following:
+
 Copyright 2012-2013 David Oswald.
 
 This program is free software, you can redistribute it and/or modify it under the terms of the Artistic License version 2.0.
