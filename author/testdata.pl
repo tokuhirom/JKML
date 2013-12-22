@@ -67,6 +67,16 @@ true
     <<'...', 'hoge"fuga',
 'hoge"fuga'
 ...
+    <<'...', ['hoge', JSON::PP::true()],
+[<<-EOS, true]
+hoge
+EOS
+...
+    <<'...', {f => 'hoge'},
+{f => <<-EOS}
+hoge
+EOS
+...
 );
 
 my $json = JSON::PP->new->pretty(1)->encode(\@tests);

@@ -40,5 +40,14 @@
    "\"hoge'fuga\"\n",
    "hoge'fuga",
    "'hoge\"fuga'\n",
-   "hoge\"fuga"
+   "hoge\"fuga",
+   "[<<-EOS, true]\nhoge\nEOS\n",
+   [
+      "hoge",
+      true
+   ],
+   "{f => <<-EOS}\nhoge\nEOS\n",
+   {
+      "f" : "hoge"
+   }
 ]

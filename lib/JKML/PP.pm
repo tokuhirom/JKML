@@ -126,9 +126,7 @@ sub _decode_array {
   until (m/\G\]/gc) {
 
     # Value
-    my $v;
-    _decode_value(\$v);
-    push @array, $v;
+    _decode_value(\($array[0+@array]));
 
     # Separator
     my $found_separator = 0;

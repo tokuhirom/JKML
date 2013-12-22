@@ -7,6 +7,14 @@ use JSON::PP;
 
 # run author/testdata.pl for update test cases.
 
+{
+    is_deeply(decode_jkml(<<'...'), {foo => 'hoge'}) or die;
+{foo => <<-EOS}
+hoge
+EOS
+...
+}
+
 open my $fh, '<', 't/data.json'
     or die "Cannot open t/data.json for reading: $!";
 my $json = do { local $/; <$fh> };
