@@ -43,7 +43,7 @@
       },
       "runtime" : {
          "requires" : {
-            "Types::Serializer" : "0",
+            "Types::Serialiser" : "0",
             "perl" : "5.008005"
          }
       },
@@ -57,13 +57,13 @@
    "release_status" : "unstable",
    "resources" : {
       "bugtracker" : {
-         "web" : "https://github.com/tokuhirom/JKML-PP/issues"
+         "web" : "https://github.com/tokuhirom/JKML/issues"
       },
-      "homepage" : "https://github.com/tokuhirom/JKML-PP",
+      "homepage" : "https://github.com/tokuhirom/JKML",
       "repository" : {
          "type" : "git",
-         "url" : "git://github.com/tokuhirom/JKML-PP.git",
-         "web" : "https://github.com/tokuhirom/JKML-PP"
+         "url" : "git://github.com/tokuhirom/JKML.git",
+         "web" : "https://github.com/tokuhirom/JKML"
       }
    },
    "version" : "0.01"
