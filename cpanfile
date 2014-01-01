@@ -1,5 +1,5 @@
 requires 'perl', '5.008001';
-requires 'Types::Serializer';
+requires 'Types::Serialiser';
 
 on 'test' => sub {
     requires 'Test::More', '0.98';
