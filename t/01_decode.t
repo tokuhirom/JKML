@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::More;
-use JKML::PP;
+use JKML;
 use JSON::PP;
 
 # run author/testdata.pl for update test cases.

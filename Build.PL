@@ -23,8 +23,8 @@ my %args = (
         'Module::Build' => 0.38,
     },
 
-    name            => 'JKML-PP',
-    module_name     => 'JKML::PP',
+    name            => 'JKML',
+    module_name     => 'JKML',
     allow_pureperl => 0,
 
     script_files => [glob('script/*'), glob('bin/*')],

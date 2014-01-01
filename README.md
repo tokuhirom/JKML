@@ -1,10 +1,10 @@
 # NAME
 
-JKML::PP - Just K markup language in pure perl
+JKML - Just K markup language in pure perl
 
 # SYNOPSIS
 
-    use JKML::PP;
+    use JKML;
 
     decode_jkml(<<'...');
     [
@@ -15,8 +15,7 @@ JKML::PP - Just K markup language in pure perl
         description => <<-EOF,
         This markup language is human writable.
         
-
-        JKML::PP supports following features:
+        JKML supports following features:
 
           * heredoc
           * raw string.
@@ -29,7 +28,7 @@ JKML::PP - Just K markup language in pure perl
 
 # DESCRIPTION
 
-JKML::PP is parser library for JKML. JKML is yet another markup language.
+JKML is parser library for JKML. JKML is yet another markup language.
 
 ## What's difference between JSON?
 

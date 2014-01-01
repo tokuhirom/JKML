@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::More;
-use JKML::PP;
+use JKML;
 
 is encode_jkml([]), '[]';
 is encode_jkml({}), '{}';

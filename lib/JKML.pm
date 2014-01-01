@@ -1,4 +1,4 @@
-package JKML::PP;
+package JKML;
 use 5.008005;
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ our $VERSION = "0.01";
 our @HERE_QUEUE;
 our $SELF;
 
-# JKML::PP is based on JSON::Tiny.
+# JKML is based on JSON::Tiny.
 # JSON::Tiny was "Adapted from Mojo::JSON and Mojo::Util".
 
 # Licensed under the Artistic 2.0 license.
@@ -69,8 +69,8 @@ my $COMMENT_RE = qr!#[^\n]*(?:\n|\z)!;
 my $IGNORABLE_RE = qr!(?:$WHITESPACE_RE|$COMMENT_RE)*!;
 my $LEFTOVER_RE = qr!(?:$WHITESPACE_RE|$COMMENT_RE|[\x0d\x0a])*!;
 
-sub decode_jkml { JKML::PP->new->decode(shift) }
-sub encode_jkml { JKML::PP->new->encode(shift) }
+sub decode_jkml { JKML->new->decode(shift) }
+sub encode_jkml { JKML->new->encode(shift) }
 
 
 sub decode {
@@ -397,11 +397,11 @@ __END__
 
 =head1 NAME
 
-JKML::PP - Just K markup language in pure perl
+JKML - Just K markup language in pure perl
 
 =head1 SYNOPSIS
 
-    use JKML::PP;
+    use JKML;
 
     decode_jkml(<<'...');
     [
@@ -412,7 +412,7 @@ JKML::PP - Just K markup language in pure perl
         description => <<-EOF,
         This markup language is human writable.
         
-        JKML::PP supports following features:
+        JKML supports following features:
 
           * heredoc
           * raw string.
@@ -425,7 +425,7 @@ JKML::PP - Just K markup language in pure perl
 
 =head1 DESCRIPTION
 
-JKML::PP is parser library for JKML. JKML is yet another markup language.
+JKML is parser library for JKML. JKML is yet another markup language.
 
 =head2 What's difference between JSON?
 

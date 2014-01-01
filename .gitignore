@@ -24,4 +24,8 @@ cover_db/
 
 MYMETA.*
 
-/JKML-PP-*
+/JKML-*
+/.build
+/_build_params
+!Build/
+!META.json
