@@ -397,7 +397,7 @@ __END__
 
 =head1 NAME
 
-JKML - Just K markup language in pure perl
+JKML - Just K markup language
 
 =head1 SYNOPSIS
 
@@ -438,6 +438,8 @@ JKML extends following features:
 =item Comments
 
 =back
+
+These features are very useful for writing test data.
 
 =head1 JKML and encoding
 
