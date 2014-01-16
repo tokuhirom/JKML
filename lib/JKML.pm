@@ -427,6 +427,8 @@ JKML - Just K markup language
 
 JKML is parser library for JKML. JKML is yet another markup language.
 
+B<This module is alpha state. Any API will change without notice.>
+
 =head2 What's difference between JSON?
 
 JKML extends following features:
