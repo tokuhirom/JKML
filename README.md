@@ -1,6 +1,6 @@
 # NAME
 
-JKML - Just K markup language in pure perl
+JKML - Just K markup language
 
 # SYNOPSIS
 
@@ -30,12 +30,16 @@ JKML - Just K markup language in pure perl
 
 JKML is parser library for JKML. JKML is yet another markup language.
 
+__This module is alpha state. Any API will change without notice.__
+
 ## What's difference between JSON?
 
 JKML extends following features:
 
 - Raw strings
 - Comments
+
+These features are very useful for writing test data.
 
 # JKML and encoding
 
